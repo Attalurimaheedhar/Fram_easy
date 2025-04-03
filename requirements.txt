@@ -1,0 +1,8 @@
+flask
+numpy
+gunicorn
+pickle-mixin
+scikit-learn
+mysql-connector-python
+python-dotenv
+Pillow

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Recommendation & Info</title> {# Changed title slightly #}
+    <style>
+        /* Styles remain the same, but you might want specific styles */
+        /* for the single predicted image if different from gallery items */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h2 { text-align: center; }
+        .container { max-width: 900px; margin: auto; padding: 15px; }
+        .form-container, .result-container, .image-display-container, .video-container { margin-bottom: 30px; } /* Renamed gallery container */
+        form { max-width: 400px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; background: #f9f9f9; }
+        label { display: block; margin: 10px 0 5px; text-align: left; }
+        input { width: calc(100% - 18px); padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { width: 100%; padding: 10px; background: green; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: darkgreen; }
+        .result { margin-top: 20px; font-size: 20px; font-weight: bold; color: blue; text-align: center; padding: 15px; border: 1px dashed blue; border-radius: 5px; background-color: #e7f3ff; }
+        hr { margin: 30px 0; border: 0; border-top: 1px solid #eee; }
+        /* Image Display Styles (can reuse/adapt gallery styles) */
+        .image-gallery { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 20px; }
+        .image-item { border: 1px solid #ddd; border-radius: 8px; padding: 10px; background-color: #fff; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); width: 200px; text-align: center; display: inline-block; /* Ensure items can be centered */ vertical-align: top; margin: 5px; } /* Added display/vertical-align/margin */
+        .image-item img { max-width: 100%; height: 150px; object-fit: cover; display: block; margin-bottom: 10px; border-radius: 4px; }
+        .image-item p { font-size: 0.9em; color: #555; margin: 0; word-wrap: break-word; }
+        /* Style for the single predicted image container */
+        .predicted-image-container { text-align: center; }
+        .predicted-image-container .image-item img { height: auto; max-width: 350px; /* Larger maybe? */ object-fit: contain; } /* Adjust single image style */
+        /* Video Container Style */
+        .video-container { text-align: center; margin-top: 30px; }
+        .video-container iframe { max-width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="form-container">
+            <h2>Crop Recommendation System</h2>
+            <form action="/predict" method="post">
+                <!-- Form inputs remain the same -->
+                <label for="nitrogen">Nitrogen (N):</label>
+                <input type="number" id="nitrogen" name="nitrogen" required placeholder="e.g., 0 to 200">
+
+                <label for="phosphorus">Phosphorus (P):</label>
+                <input type="number" id="phosphorus" name="phosphorus" required placeholder="e.g., 0 to 200">
+
+                <label for="potassium">Potassium (K):</label>
+                <input type="number" id="potassium" name="potassium" required placeholder="e.g., 0 to 200">
+
+                <label for="temperature">Temperature (°C):</label>
+                <input type="number" step="0.1" id="temperature" name="temperature" required placeholder="e.g., 0 to 70 °C">
+
+                <label for="humidity">Humidity (%):</label>
+                <input type="number" step="0.1" id="humidity" name="humidity" required placeholder="e.g., 0 to 100 %">
+
+                <label for="ph">pH:</label>
+                <input type="number" step="0.1" id="ph" name="ph" required placeholder="e.g., 1 to 14">
+
+                <label for="rainfall">Rainfall (mm):</label>
+                <input type="number" step="0.1" id="rainfall" name="rainfall" required placeholder="e.g., 0 to 4000 mm">
+
+                <button type="submit">Get Recommendation</button>
+            </form>
+        </div>
+
+        <!-- Display Prediction Result -->
+        {% if prediction_text %}
+            <div class="result-container">
+                <div class="result">
+                    <p>{{ prediction_text }}</p>
+                </div>
+            </div>
+        {% endif %}
+
+        <hr>
+
+        <!-- Image Display Section (Conditional) -->
+        <div class="image-display-container">
+
+            {% if predicted_image_data %}
+                <!-- *** A prediction was made AND a relevant image was found *** -->
+                <div class="predicted-image-container">
+                     <h2>Image for Recommended Crop: {{ predicted_crop_name }}</h2>
+                     <div class="image-item"> {# Reusing style, adjust as needed #}
+                        {# Ensure image_path is relative to 'static' folder #}
+                        {# e.g., 'uploads/rice.jpg' #}
+                        <img src="{{ url_for('static', filename=predicted_image_data.image_path) }}"
+                             alt="{{ predicted_image_data.description | default('Image for ' + predicted_crop_name) }}">
+                        <p>{{ predicted_image_data.description | default('Information about ' + predicted_crop_name) }}</p>
+                     </div>
+                </div>
+
+            {% elif predicted_crop_name %}
+                <!-- *** A prediction was made BUT NO relevant image was found *** -->
+                 <h2 style="text-align:center;">Recommended Crop: {{ predicted_crop_name }}</h2>
+                 <p style="text-align: center; color: #888; margin-top: 20px;">
+                     No specific image found in the database for this crop.
+                 </p>
+
+            {% elif images and images|length > 0 %}
+                <!-- *** No prediction made yet (initial load) - Show Gallery *** -->
+                 <div class="gallery-container">
+                    <h2>Recent Images</h2>
+                    <div class="image-gallery">
+                        {% for image in images %}
+                            <div class="image-item">
+                                <img src="{{ url_for('static', filename=image.image_path) }}" alt="{{ image.description | default('Image from database') }}">
+                                <p>{{ image.description | default('No description available') }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            {% else %}
+                 <!-- *** No prediction made AND no recent images found/passed *** -->
+                 <p style="text-align: center; color: #888;">No images to display at this time.</p>
+            {% endif %}
+
+        </div> {# End image-display-container #}
+
+
+        <hr>
+
+        <!-- Video Section -->
+        <div class="video-container">
+             <h2>Informational Video</h2>
+             <iframe width="560" height="315"
+                src="https://www.youtube.com/embed/np9RbtHX6mA"
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+             </iframe>
+        </div>
+
+    </div> <!-- End Container -->
+</body>
+</html>
